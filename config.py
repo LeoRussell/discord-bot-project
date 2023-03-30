@@ -1,0 +1,3 @@
+token = 'MTA4OTg4MjA1NjIwMjM5OTc3NQ.GUksMk.cJQdg3F60L_oPVyxHQ8hb5KMEnF6uZ84n82GGE'
+
+prefix = '!'
