@@ -2,40 +2,42 @@ import discord
 from discord.ext import commands
 import requests
 import config
+from english_words import get_english_words_set
+import random
 
+web2lowerset = get_english_words_set(['web2'], lower=True)
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=config.prefix, intents=intents) 
-
+web2lowerset = ["bad", "good"]
 
 
 @bot.command()
-async def map(ctx, latitude="1", longitude="1", zoom="15", pic="map"):
-    if not (latitude.replace("-", "")).isdigit():
-        await ctx.reply("latitude par must be integer!")
-    elif not (longitude.replace("-", "")).isdigit():
-        await ctx.reply("longitude par must be integer!")
-    elif not (zoom.replace("-", "")).isdigit():
-        await ctx.reply("zoom par must be integer!")
-    elif not (pic).isalpha():
-        await ctx.reply("pic par must be string!")
-    else:
-        if not(int(latitude) in range(-86, 87)):
-            await ctx.reply("latitude par must be in range(-86, 87)!")
-        elif not(int(longitude) in range(-180, 181)):
-            await ctx.reply("longitude par must be in range(-180, 181)!")
-        elif not(int(zoom) in range(1, 17)):
-            await ctx.reply("zoom par must be in range(1, 17)!")
-        elif pic != "sat" or pic != "map":
-            await ctx.reply('pic par must be "map" or "sat"')
+async def translate(ctx):
+    output = random.choice(list(web2lowerset))
+    await ctx.reply(output)
+    
+    url = "https://microsoft-translator-text.p.rapidapi.com/BreakSentence"
+
+    querystring = {"api-version":"3.0"}
+
+    payload = [{"Text": output}]
+    headers = {
+        "content-type": "application/json",
+        "X-RapidAPI-Key": "5ae9d6a133mshe6372b0ccf5e37bp10183ajsn73865becc77e",
+        "X-RapidAPI-Host": "microsoft-translator-text.p.rapidapi.com"
+    }
+
+    response = requests.request("POST", url, json=payload, headers=headers, params=querystring)
+
+    print(response.text)
+    @bot.command()
+    async def reply(ctx, message):
+        if message == response.text:
+            await ctx.reply("Верно!")
         else:
-            map_request = f"https://static-maps.yandex.ru/1.x/?ll={longitude},{latitude}&z={zoom}&l={pic}"
-            response = requests.get(map_request)
-            map_file = "map.jpg"
-            with open(map_file, "wb") as file:
-                file.write(response.content)
-                
-            await ctx.reply(file=discord.File('map.jpg'))
+            await ctx.reply(f"Неверно! Правильный ответ - {response.text}")
+            print(response.text)
 
 
 if __name__ == "__main__":
