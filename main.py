@@ -4,6 +4,7 @@ import config
 from english_words import get_english_words_set
 import random
 import sqlite3
+import asyncio
 
 web2lowerset = get_english_words_set(['web2'], lower=True)
 intents = discord.Intents.default()
@@ -19,25 +20,23 @@ cur_words = con_words.cursor()
 englishwords = cur_words.execute(f"""SELECT en FROM translates""").fetchall()
 russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
+
 @bot.command()
 async def translate(ctx):
     bot.remove_command("reply")
-    
-    if ctx.author not in cur_ids.execute(f"""SELECT id FROM options""").fetchall():
-        cur_ids.execute(f"""INSERT INTO options(id, language) VALUES('{ctx.author}', 'en')""")
+    if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
+        cur_ids.execute(f"""INSERT INTO options(id, language, mode) VALUES('{ctx.author}', 'en', 'single')""")
 
-    options = [i[0] for i in cur_ids.execute(f"""SELECT language FROM options WHERE id = '{ctx.author}'""").fetchall()]
-
+    options = [i for i in cur_ids.execute(f"""SELECT language, mode FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
 
     if "ru" in options:
         output = random.choice(russianwords)[0]
-        answer = cur_words.execute(f'''SELECT en FROM translates WHERE ru = "{output}"''').fetchall()
+        answer = [j[0] for j in cur_words.execute(f'''SELECT en FROM translates WHERE ru = "{output}"''').fetchall()]
 
     else:
         output = random.choice(englishwords)[0]
-        answer = cur_words.execute(f'''SELECT ru FROM translates WHERE en = "{output}"''').fetchall()
+        answer = [j[0] for j in cur_words.execute(f'''SELECT ru FROM translates WHERE en = "{output}"''').fetchall()]
 
-    answer = [i[0] for i in answer]
 
     await ctx.reply(output)
 
@@ -67,33 +66,54 @@ async def translate(ctx):
                 
         else:
             await ctx.reply(f"Ошибка! Попробуйте ввести ответ ещё раз.")
+        
+        
+        if "auto" in options:
+            asyncio.run_coroutine_threadsafe(translate(ctx), bot.loop)
+        else:
+            pass
+            
+
 
 
 @bot.command()
 async def settings(ctx, *options):
-    if ctx.author not in cur_ids.execute(f"""SELECT id FROM options""").fetchall(): 
-        cur_ids.execute(f"""INSERT INTO options(id, language) VALUES('{ctx.author}', 'en')""")
+    if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
+        cur_ids.execute(f"""INSERT INTO options(id, language, mode) VALUES('{ctx.author}', 'en', 'single')""")
         con_ids.commit()
     
-    p_options = cur_ids.execute(f"""SELECT language FROM options WHERE id = '{ctx.author}'""").fetchall()
+    p_options = [i for i in cur_ids.execute(f"""SELECT language, mode FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
     if len(options) == 0 or options == []:
-        await ctx.reply(f"Ваши настройки:\n-language: {p_options[0][0]}.")
+        await ctx.reply(f"Ваши настройки:\n-language: {p_options[0]}.\n-mode: {p_options[1]}.")
 
     else:
-        if "-language" in options:
-            try:
+        try:
+            if "-language" in options:
                 if options[options.index("-language") + 1] == "ru":
                     cur_ids.execute(f"""UPDATE options SET language = 'ru' WHERE id = '{ctx.author}'""")
                 elif options[options.index("-language") + 1] == "en":
                     cur_ids.execute(f"""UPDATE options SET language = 'en' WHERE id = '{ctx.author}'""")
+                else:
+                    raise IndexError
                 
                 con_ids.commit()
-                await ctx.reply(f"Настройки успешно изменены!")
             
-            except IndexError:
-                await ctx.reply(f"Ошибка! Попробуйте ввести настройки ещё раз.")
+            if "-mode" in options:
+                if options[options.index("-mode") + 1] == "auto":
+                    cur_ids.execute(f"""UPDATE options SET mode = 'auto' WHERE id = '{ctx.author}'""")
+                elif options[options.index("-mode") + 1] == "single":
+                    cur_ids.execute(f"""UPDATE options SET mode = 'single' WHERE id = '{ctx.author}'""")
+                else:
+                    raise IndexError
+                
+                con_ids.commit()
+                
+            await ctx.reply(f"Настройки успешно изменены!")
 
-
+        except IndexError:
+            await ctx.reply(f"Ошибка! Попробуйте ввести настройки ещё раз.")
+        
+        
 
 
 if __name__ == "__main__":
