@@ -160,8 +160,32 @@ async def translate(ctx, *message):
     }
 
     response = requests.post(url, json=payload, headers=headers, params=querystring)
-    
+
     await ctx.reply(f"{response.json()[0]['translations'][0]['text']}")
+
+
+@bot.command()
+async def top(ctx, num=10):
+    results = cur_ids.execute(f"""SELECT id, points FROM results""").fetchall()
+    dict_results = dict()
+    for i in results:
+        dict_results[i[0]] = int(i[1])
+    
+    sorted_dict = {}
+    sorted_keys = sorted(dict_results, key=dict_results.get, reverse=True)
+
+    for j in sorted_keys:
+        sorted_dict[j] = dict_results[j]
+
+    output = f"Топ сервера по очкам на данный момент:\n"
+    n = 0
+    for i in sorted_dict.keys():
+        if n == num:
+            break
+        output += f"{i} – {sorted_dict[i]}\n"
+        n += 1
+    
+    await ctx.send(output)
 
 
 if __name__ == "__main__":
