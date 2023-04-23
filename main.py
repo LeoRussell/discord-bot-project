@@ -22,7 +22,7 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 
 @bot.command()
-async def translate(ctx):
+async def start(ctx):
     bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, mode) VALUES('{ctx.author}', 'en', 'single')""")
@@ -69,11 +69,14 @@ async def translate(ctx):
         
         
         if "auto" in options:
-            asyncio.run_coroutine_threadsafe(translate(ctx), bot.loop)
+            asyncio.run_coroutine_threadsafe(start(ctx), bot.loop)
         else:
             pass
-            
-
+    
+    @bot.command()
+    async def cancel(ctx):
+        bot.remove_command("reply") 
+        await ctx.reply(f"Ввод отменён!")
 
 
 @bot.command()
