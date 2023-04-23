@@ -5,6 +5,8 @@ from english_words import get_english_words_set
 import random
 import sqlite3
 import asyncio
+import requests
+
 
 web2lowerset = get_english_words_set(['web2'], lower=True)
 intents = discord.Intents.default()
@@ -21,12 +23,15 @@ englishwords = cur_words.execute(f"""SELECT en FROM translates""").fetchall()
 russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 @bot.command()
-async def start(ctx):
+async def start(ctx, message):
     bot.remove_command("reply") 
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', none)""")
-
+    
     options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
+
+    if message == "auto":
+        options[1] = "auto"
 
     if "ru" in options:
         output = random.choice(russianwords)[0]
@@ -137,8 +142,26 @@ async def settings(ctx, *options):
 
         except IndexError:
             await ctx.reply(f"Ошибка! Попробуйте изменить настройки ещё раз.")
-        
-        
+
+
+@bot.command()
+async def translate(ctx, *message):
+    message = (" ".join(message)).replace('"', '')
+
+    url = "https://microsoft-translator-text.p.rapidapi.com/translate"
+
+    querystring = {"to[0]":"ru","api-version":"3.0","profanityAction":"NoAction","textType":"plain"}
+
+    payload = [{ "Text": message}]
+    headers = {
+        "content-type": "application/json",
+        "X-RapidAPI-Key": "5ae9d6a133mshe6372b0ccf5e37bp10183ajsn73865becc77e",
+        "X-RapidAPI-Host": "microsoft-translator-text.p.rapidapi.com"
+    }
+
+    response = requests.post(url, json=payload, headers=headers, params=querystring)
+    
+    await ctx.reply(f"{response.json()[0]['translations'][0]['text']}")
 
 
 if __name__ == "__main__":
