@@ -26,7 +26,7 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 
 @bot.command()
-async def start(ctx, message):
+async def start(ctx, message=None):
     bot.remove_command("reply") 
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
@@ -221,10 +221,7 @@ async def words(ctx):
     @bot.command()
     async def reply(ctx, answer):
         if answer[0] == word[-1]:
-            ok = list(web2lowerset)
-            #print(word, word in ok)
-            #print(ok.index(word))
-            if word in list(web2lowerset):
+            if answer in list(web2lowerset):
                 if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
                     cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
