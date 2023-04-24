@@ -16,7 +16,7 @@ bot = commands.Bot(command_prefix=config.prefix, intents=intents)
 con_ids = sqlite3.connect("ids.db")
 cur_ids = con_ids.cursor()
 
-con_words = sqlite3.connect("words.db")
+con_words = sqlite3.connect("language.db")
 cur_words = con_words.cursor()
 
 web2lowerset = get_english_words_set(['web2'], lower=True)
@@ -267,6 +267,59 @@ async def statistic(ctx):
     output = f"{ctx.author.mention}\nКоличество очков: {stats[0][0]}.\nМесто в топе: {place_in_top}"
 
     await ctx.reply(output)
+
+
+@bot.command()
+async def countries(ctx):
+    bot.remove_command("reply")
+    if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
+        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        con_ids.commit()
+
+    options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
+
+    countries_list = cur_words.execute(f"""SELECT country, city FROM cities""").fetchall()
+
+    right_cc = random.choice(countries_list)
+    cities = [random.choice(countries_list)[1], random.choice(countries_list)[1], right_cc[1]]
+    random.shuffle(cities)
+
+    await ctx.reply(f'Выберите правильный вариант ответа.\
+                    \n Столицей страны {right_cc[0]} является...: \
+                    \n1. {cities[0]}.\n2. {cities[1]}.\n3. {cities[2]}.')
+    
+    def check(message):
+        return message.author.id == ctx.author.id
+    
+
+    @bot.command()
+    async def reply(ctx, answer):
+        if answer.isdigit():
+            try:
+                if cities[int(answer) - 1] == right_cc[1]:
+                    if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
+                        cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
+                        cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
+                    else:
+                        points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
+                        cur_ids.execute(f"""UPDATE results SET points = {points} WHERE id = '{ctx.author}'""")
+                    
+                    con_ids.commit()
+
+                    await ctx.send("Верно!")
+                    asyncio.run_coroutine_threadsafe(countries(ctx), bot.loop)
+                else:
+                    await ctx.send(f"Ответ неверный! Правильный ответ - {right_cc[1]}.")
+            except IndexError:
+                await ctx.reply(f'Ответ неверный! Правильный ответ - {right_cc[1]}')   
+        else:
+            await ctx.reply(f'Ответ должен быть цифрой! Попробуйте ещё раз.')
+
+    try:
+        m = await bot.wait_for("message", check=check, timeout = int(options[2]))
+    except asyncio.TimeoutError:
+        bot.remove_command("reply") 
+        await ctx.send(f"{ctx.author.mention} Время ответа вышло!")
 
 
 if __name__ == "__main__":
