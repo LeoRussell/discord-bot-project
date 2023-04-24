@@ -1,3 +1,3 @@
-token = 'MTEwMDA3MjUyNTU3ODM4NzUxOA.GOkHyT.LfcCKomwDx7d03b4Mu_jVszMcSs7I7vIgIvQCY'
+token = 'MTEwMDExNDc3NTU0NDk1ODk3Nw.GKvCLr.wUybXJ6fk4evyQL5NLivASvKD-owtv8_L7nRW4'
 
 prefix = '/'

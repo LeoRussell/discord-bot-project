@@ -26,7 +26,7 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 
 @bot.command()
-async def start(ctx, message=None):
+async def traducere(ctx, message=None):
     bot.remove_command("reply") 
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
@@ -79,7 +79,7 @@ async def start(ctx, message=None):
         
         
         if "auto" in options:
-            asyncio.run_coroutine_threadsafe(start(ctx), bot.loop)
+            asyncio.run_coroutine_threadsafe(traducere(ctx), bot.loop)
         else:
             pass
     
@@ -98,59 +98,71 @@ async def cancel(ctx):
     
 
 @bot.command()
-async def settings(ctx, *options):
+async def language(ctx, par=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
-        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
         con_ids.commit()
     
-    p_options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
-    if len(options) == 0 or options == []:
-        await ctx.reply(f"Ваши настройки:\n-language: {p_options[0]}.\n-mode: {p_options[1]}.\n-timer:{p_options[2]}")
-        
-    elif options == ("default",):
-        cur_ids.execute(f"""UPDATE options SET language = 'en', mode = 'single', timer = '5' WHERE id = '{ctx.author}'""")
+    lang = [i for i in cur_ids.execute(f"""SELECT language FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]][0]
+    
+    if par == None:
+        await ctx.reply(f"Выбранный язык для игры переводчика: {lang.upper()}.")
+    
+    elif par == "ru" or par == "en":
+        cur_ids.execute(f"""UPDATE options SET language = '{par}' WHERE id = '{ctx.author}'""")
         con_ids.commit()
-        await ctx.reply(f"Настройки установлены на стандартные.")
-
+        await ctx.reply("Значения успешно изменены!")
 
     else:
+        await ctx.reply(f"Ошибка! Проверьте правильность введенных вами данных!")
+
+    
+@bot.command()
+async def timer(ctx, par=None, time=None):
+    if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
+        con_ids.commit()
+    
+    timesettings = [i for i in cur_ids.execute(f"""SELECT timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]][0]
+    
+    if par == None:
+        await ctx.reply(f"Выбранное время ожидание ответа: {timesettings}")
+    
+    elif par.isdigit():
+        secondint = int(par)
+        if secondint > 300:
+            await ctx.send("Пожалуйста, введите кол-во секунд до 300.")
+            raise BaseException
+        if secondint <= 0:
+            await ctx.send("Пожалуйста, введите число больше 0.")
+            raise BaseException
+        message = await ctx.send(f"Таймер: {int(par)}")
+        while True:
+            secondint -= 1
+            if secondint == 0:
+                await message.edit(content="Окончен!")
+                break
+            await message.edit(content=f"Таймер: {secondint}")
+            await asyncio.sleep(1)
+        await ctx.send(f"{ctx.author.mention} Отсчёт завершен!")
+    
+    elif par == "set":
         try:
-            if "-language" in options:
-                if options[options.index("-language") + 1] == "ru":
-                    cur_ids.execute(f"""UPDATE options SET language = 'ru' WHERE id = '{ctx.author}'""")
-                elif options[options.index("-language") + 1] == "en":
-                    cur_ids.execute(f"""UPDATE options SET language = 'en' WHERE id = '{ctx.author}'""")
-                else:
-                    raise IndexError
-                
+            if int(time) in range(1, 300):
+                cur_ids.execute(f"""UPDATE options SET timer = '{time}' WHERE id = '{ctx.author}'""")
                 con_ids.commit()
-            
-            if "-mode" in options:
-                if options[options.index("-mode") + 1] == "auto":
-                    cur_ids.execute(f"""UPDATE options SET mode = 'auto' WHERE id = '{ctx.author}'""")
-                elif options[options.index("-mode") + 1] == "single":
-                    cur_ids.execute(f"""UPDATE options SET mode = 'single' WHERE id = '{ctx.author}'""")
-                else:
-                    raise IndexError
-                
-                con_ids.commit()
+                await ctx.reply("Значения успешно изменены!")
 
-            if "-timer" in options:
-                if options[options.index("-timer") + 1].isdigit():
-                    if int(options[options.index("-timer") + 1]) in range(1, 61):
-                        cur_ids.execute(f"""UPDATE options SET timer = '{options[options.index("-timer") + 1]}' WHERE id = '{ctx.author}'""")
-                    else:
-                        await ctx.send(f'Параметр "-timer" должен быть в промежутке от 1 до 60 секунд.')
-                        raise IndexError
-                else:
-                    raise IndexError
-                
-                con_ids.commit()
+            else:
+                await ctx.send("Параметр time должен быть числом от 1 до 300!")
 
-            await ctx.reply(f"Настройки успешно изменены!")
+        except TypeError:
+            await ctx.send("Параметр time должен быть числом!")
+        except ValueError:
+            await ctx.send("Параметр time должен быть числом!")
 
-        except IndexError:
-            await ctx.reply(f"Ошибка! Попробуйте изменить настройки ещё раз.")
+    else:
+        await ctx.send(f"Ошибка! Проверьте правильность введенных вами данных!")
 
 
 @bot.command()
