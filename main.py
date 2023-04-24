@@ -25,17 +25,14 @@ englishwords = cur_words.execute(f"""SELECT en FROM translates""").fetchall()
 russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 
-@bot.command()
-async def traducere(ctx, message=None):
+@bot.command(name="traducere")
+async def traducere(ctx, par=None):
     bot.remove_command("reply") 
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
-        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
         con_ids.commit()
     
-    options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
-
-    if message == "auto":
-        options[1] = "auto"
+    options = [i for i in cur_ids.execute(f"""SELECT language, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
 
     if "ru" in options:
         output = random.choice(russianwords)[0]
@@ -78,26 +75,26 @@ async def traducere(ctx, message=None):
             await ctx.reply(f"Ошибка! Попробуйте ввести ответ ещё раз.")
         
         
-        if "auto" in options:
+        if par == "loop":
             asyncio.run_coroutine_threadsafe(traducere(ctx), bot.loop)
         else:
             pass
     
 
     try:
-        m = await bot.wait_for("message", check=check, timeout = int(options[2]))
+        m = await bot.wait_for("message", check=check, timeout = int(options[1]))
     except asyncio.TimeoutError:
         bot.remove_command("reply") 
         await ctx.send(f"{ctx.author.mention} Время ответа вышло!")
     
 
-@bot.command()
+@bot.command(name="cancel")
 async def cancel(ctx):
     bot.remove_command("reply")
     await ctx.reply(f"Ввод отменён!")
     
 
-@bot.command()
+@bot.command(name="language")
 async def language(ctx, par=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
         cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
@@ -117,7 +114,7 @@ async def language(ctx, par=None):
         await ctx.reply(f"Ошибка! Проверьте правильность введенных вами данных!")
 
     
-@bot.command()
+@bot.command(name="timer")
 async def timer(ctx, par=None, time=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
         cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
@@ -165,7 +162,7 @@ async def timer(ctx, par=None, time=None):
         await ctx.send(f"Ошибка! Проверьте правильность введенных вами данных!")
 
 
-@bot.command()
+@bot.command(name="translate")
 async def translate(ctx, *message):
     message = (" ".join(message)).replace('"', '')
 
@@ -185,11 +182,11 @@ async def translate(ctx, *message):
     await ctx.reply(f"{response.json()[0]['translations'][0]['text']}")
 
 
-@bot.command()
-async def top(ctx, num=10):
+@bot.command(name="top")
+async def top(ctx, par=10):
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
         cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-        cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
+        cur_ids.execute(f"""UPDATE results SET points = '0' WHERE id = '{ctx.author}'""")
         con_ids.commit()
 
     results = cur_ids.execute(f"""SELECT id, points FROM results""").fetchall()
@@ -203,10 +200,10 @@ async def top(ctx, num=10):
     for j in sorted_keys:
         sorted_dict[j] = dict_results[j]
 
-    output = f"Топ сервера по очкам на данный момент:\n"
+    output = f"Топ сервера:\n"
     n = 0
     for i in sorted_dict.keys():
-        if n == num:
+        if n == int(par):
             break
         output += f"{i} – {sorted_dict[i]}\n"
         n += 1
@@ -214,17 +211,17 @@ async def top(ctx, num=10):
     await ctx.send(output)
 
 
-@bot.command()
+@bot.command(name="words")
 async def words(ctx):
     bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
-        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
         con_ids.commit()
 
-    options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
-
+    options = [i for i in cur_ids.execute(f"""SELECT language, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
 
     word = random.choice(list(web2lowerset))
+
     await ctx.reply(word)
     
     def check(message):
@@ -236,7 +233,7 @@ async def words(ctx):
             if answer in list(web2lowerset):
                 if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-                    cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '1' WHERE id = '{ctx.author}'""")
                 else:
                     points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
                     cur_ids.execute(f"""UPDATE results SET points = {points} WHERE id = '{ctx.author}'""")
@@ -247,19 +244,19 @@ async def words(ctx):
             else:
                 await ctx.send("Хм, этого слова нет в моей базе данных. Попробуй ещё раз!")
         else:
-            await ctx.reply(f'Слово должно начинаться с полследней буквы "{word.upper()}"')
+            await ctx.reply(f'Слово должно начинаться с полследней буквы "{word}"')
 
     try:
-        m = await bot.wait_for("message", check=check, timeout = int(options[2]))
+        m = await bot.wait_for("message", check=check, timeout = int(options[1]))
     except asyncio.TimeoutError:
         bot.remove_command("reply") 
         await ctx.send(f"{ctx.author.mention} Время ответа вышло!")
 
 
-@bot.command()
+@bot.command(name="statistic")
 async def statistic(ctx):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
-        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '5')""")
     
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
@@ -281,11 +278,11 @@ async def statistic(ctx):
     await ctx.reply(output)
 
 
-@bot.command()
-async def countries(ctx):
+@bot.command(name="countries")
+async def countries(ctx, par=None):
     bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
-        cur_ids.execute(f"""INSERT INTO options(id, language, mode, timer) VALUES('{ctx.author}', 'en', 'single', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
         con_ids.commit()
 
     options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
@@ -319,7 +316,8 @@ async def countries(ctx):
                     con_ids.commit()
 
                     await ctx.send("Верно!")
-                    asyncio.run_coroutine_threadsafe(countries(ctx), bot.loop)
+                    if par == 'loop':
+                        asyncio.run_coroutine_threadsafe(countries(ctx), bot.loop)
                 else:
                     await ctx.send(f"Ответ неверный! Правильный ответ - {right_cc[1]}.")
             except IndexError:
@@ -328,7 +326,7 @@ async def countries(ctx):
             await ctx.reply(f'Ответ должен быть цифрой! Попробуйте ещё раз.')
 
     try:
-        m = await bot.wait_for("message", check=check, timeout = int(options[2]))
+        m = await bot.wait_for("message", check=check, timeout = int(options[1]))
     except asyncio.TimeoutError:
         bot.remove_command("reply") 
         await ctx.send(f"{ctx.author.mention} Время ответа вышло!")
