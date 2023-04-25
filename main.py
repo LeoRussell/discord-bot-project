@@ -274,7 +274,7 @@ async def words(ctx):
 @bot.command(name="statistic")
 async def statistic(ctx):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
-        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '5')""")
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
     
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
@@ -307,7 +307,7 @@ async def countries(ctx, par=None):
         cur_ids.execute(f"""INSERT INTO options(id, language, timer) VALUES('{ctx.author}', 'en', '15')""")
         con_ids.commit()
 
-    options = [i for i in cur_ids.execute(f"""SELECT language, mode, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
+    options = [i for i in cur_ids.execute(f"""SELECT language, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
 
     countries_list = cur_words.execute(f"""SELECT country, city FROM cities""").fetchall()
 
