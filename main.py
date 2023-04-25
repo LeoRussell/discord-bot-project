@@ -42,9 +42,9 @@ async def traducere(ctx, par=None):
         output = random.choice(englishwords)[0]
         answer = [j[0] for j in cur_words.execute(f'''SELECT ru FROM translates WHERE en = "{output}"''').fetchall()]
 
-    await ctx.send(output)
-
     con_ids.commit()
+
+    await ctx.send(output)
     
     def check(message):
         return message.author.id == ctx.author.id
@@ -60,15 +60,27 @@ async def traducere(ctx, par=None):
             if message in answer:
                 if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-                    cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                 else:
                     points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                    cur_ids.execute(f"""UPDATE results SET points = {points} WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
+
+                    combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
+                    highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                    cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
+                    if int(combo) > int(highest_combo):
+                        cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
 
                 con_ids.commit()
                 await ctx.reply(f"Верно!")
 
             else:
+                if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
+                    cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
+                    cur_ids.execute(f"""UPDATE results SET points = '0', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
+                else:
+                    cur_ids.execute(f"""UPDATE results SET combo = '0' WHERE id = '{ctx.author}'""")
+
                 await ctx.reply(f"Неверно! Возможные варианты перевода - {', '.join(answer)}")
                 
         else:
@@ -76,7 +88,7 @@ async def traducere(ctx, par=None):
         
         
         if par == "loop":
-            asyncio.run_coroutine_threadsafe(traducere(ctx), bot.loop)
+            asyncio.run_coroutine_threadsafe(traducere(ctx, "loop"), bot.loop)
         else:
             pass
     
@@ -186,7 +198,7 @@ async def translate(ctx, *message):
 async def top(ctx, par=10):
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
         cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-        cur_ids.execute(f"""UPDATE results SET points = '0' WHERE id = '{ctx.author}'""")
+        cur_ids.execute(f"""UPDATE results SET points = '1', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
         con_ids.commit()
 
     results = cur_ids.execute(f"""SELECT id, points FROM results""").fetchall()
@@ -233,10 +245,16 @@ async def words(ctx):
             if answer in list(web2lowerset):
                 if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-                    cur_ids.execute(f"""UPDATE results SET points = '1' WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                 else:
                     points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                    cur_ids.execute(f"""UPDATE results SET points = {points} WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
+
+                    combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
+                    highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                    cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
+                    if int(combo) > int(highest_combo):
+                        cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
                 
                 con_ids.commit()
 
@@ -244,7 +262,7 @@ async def words(ctx):
             else:
                 await ctx.send("Хм, этого слова нет в моей базе данных. Попробуй ещё раз!")
         else:
-            await ctx.reply(f'Слово должно начинаться с полследней буквы "{word}"')
+            await ctx.reply(f'Слово должно начинаться с последней буквы "{word}"')
 
     try:
         m = await bot.wait_for("message", check=check, timeout = int(options[1]))
@@ -260,11 +278,11 @@ async def statistic(ctx):
     
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-                    cur_ids.execute(f"""UPDATE results SET points = '0' WHERE id = '{ctx.author}'""")
+                    cur_ids.execute(f"""UPDATE results SET points = '0', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
     
     con_ids.commit()
 
-    stats = cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()
+    stats = cur_ids.execute(f"""SELECT points, combo, highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()
 
     results = cur_ids.execute(f"""SELECT id, points FROM results""").fetchall()
     dict_results = dict()
@@ -273,7 +291,11 @@ async def statistic(ctx):
     
     sorted_keys = sorted(dict_results, key=dict_results.get, reverse=True)
     place_in_top = sorted_keys.index(str(ctx.author)) + 1
-    output = f"{ctx.author.mention}\nКоличество очков: {stats[0][0]}.\nМесто в топе: {place_in_top}"
+    output = f"{ctx.author.mention} \
+            \nКоличество очков: {stats[0][0]}. \
+            \nМесто в топе: {place_in_top} \
+            \nКомбо: {stats[0][1]} \
+            \nМакс. комбо: {stats[0][2]}"
 
     await ctx.reply(output)
 
@@ -308,19 +330,35 @@ async def countries(ctx, par=None):
                 if cities[int(answer) - 1] == right_cc[1]:
                     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                         cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
-                        cur_ids.execute(f"""UPDATE results SET points = 1 WHERE id = '{ctx.author}'""")
+                        cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                     else:
                         points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                        cur_ids.execute(f"""UPDATE results SET points = {points} WHERE id = '{ctx.author}'""")
+                        cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
+
+                        combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
+                        highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                        cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
+                        if int(combo) > int(highest_combo):
+                            cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
                     
                     con_ids.commit()
 
                     await ctx.send("Верно!")
                     if par == 'loop':
-                        asyncio.run_coroutine_threadsafe(countries(ctx), bot.loop)
+                        asyncio.run_coroutine_threadsafe(countries(ctx, "loop"), bot.loop)
                 else:
+                    if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
+                        cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
+                        cur_ids.execute(f"""UPDATE results SET points = '0', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
+                    else:
+                        cur_ids.execute(f"""UPDATE results SET combo = '0' WHERE id = '{ctx.author}'""")
                     await ctx.send(f"Ответ неверный! Правильный ответ - {right_cc[1]}.")
             except IndexError:
+                if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
+                    cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
+                    cur_ids.execute(f"""UPDATE results SET points = '0', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
+                else:
+                    cur_ids.execute(f"""UPDATE results SET combo = '0' WHERE id = '{ctx.author}'""")
                 await ctx.reply(f'Ответ неверный! Правильный ответ - {right_cc[1]}')   
         else:
             await ctx.reply(f'Ответ должен быть цифрой! Попробуйте ещё раз.')
