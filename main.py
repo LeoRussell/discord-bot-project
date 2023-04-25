@@ -44,7 +44,7 @@ async def traducere(ctx, par=None):
 
     con_ids.commit()
 
-    await ctx.send(output)
+    await ctx.send(f"> {output.capitalize()}")
     
     def check(message):
         return message.author.id == ctx.author.id
@@ -62,14 +62,19 @@ async def traducere(ctx, par=None):
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
                     cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                 else:
-                    points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                    cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
-
                     combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
                     highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
                     cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
                     if int(combo) > int(highest_combo):
                         cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
+                    
+                    points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                    if combo < 10:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 1}' WHERE id = '{ctx.author}'""")
+                    elif combo < 25:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 2}' WHERE id = '{ctx.author}'""")
+                    elif combo >= 50:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 3}' WHERE id = '{ctx.author}'""")
 
                 con_ids.commit()
                 await ctx.reply(f"Верно!")
@@ -157,13 +162,13 @@ async def timer(ctx, par=None, time=None):
     
     elif par == "set":
         try:
-            if int(time) in range(1, 300):
+            if int(time) in range(1, 60):
                 cur_ids.execute(f"""UPDATE options SET timer = '{time}' WHERE id = '{ctx.author}'""")
                 con_ids.commit()
                 await ctx.reply("Значения успешно изменены!")
 
             else:
-                await ctx.send("Параметр time должен быть числом от 1 до 300!")
+                await ctx.send("Параметр time должен быть числом от 1 до 60!")
 
         except TypeError:
             await ctx.send("Параметр time должен быть числом!")
@@ -234,7 +239,7 @@ async def words(ctx):
 
     word = random.choice(list(web2lowerset))
 
-    await ctx.reply(word)
+    await ctx.reply(f"**{word.capitalize()}**")
     
     def check(message):
         return message.author.id == ctx.author.id
@@ -247,20 +252,35 @@ async def words(ctx):
                     cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
                     cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                 else:
-                    points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                    cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
-
                     combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
                     highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
                     cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
                     if int(combo) > int(highest_combo):
                         cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
+                    
+                    points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                    if combo < 10:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 1}' WHERE id = '{ctx.author}'""")
+                    elif combo < 25:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 2}' WHERE id = '{ctx.author}'""")
+                    elif combo >= 50:
+                        cur_ids.execute(f"""UPDATE results SET points = '{points + 3}' WHERE id = '{ctx.author}'""")
                 
                 con_ids.commit()
 
                 asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
             else:
-                await ctx.send("Хм, этого слова нет в моей базе данных. Попробуй ещё раз!")
+                if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
+                    cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
+                    cur_ids.execute(f"""UPDATE results SET points = '0', combo = '0', highest_combo = '0' WHERE id = '{ctx.author}'""")
+                else:
+                    cur_ids.execute(f"""UPDATE results SET combo = '0' WHERE id = '{ctx.author}'""")
+
+                con_ids.commit()
+
+                await ctx.send("Такого слова не существует! Попробуй ещё раз!")
+                asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
+
         else:
             await ctx.reply(f'Слово должно начинаться с последней буквы "{word}"')
 
@@ -315,9 +335,10 @@ async def countries(ctx, par=None):
     cities = [random.choice(countries_list)[1], random.choice(countries_list)[1], right_cc[1]]
     random.shuffle(cities)
 
-    await ctx.reply(f'Выберите правильный вариант ответа.\
-                    \n Столицей страны {right_cc[0]} является...: \
-                    \n1. {cities[0]}.\n2. {cities[1]}.\n3. {cities[2]}.')
+    await ctx.reply(embed = discord.Embed(title=f'Выбери правильный вариант ответа!', 
+                                        description=f'\n _Столицей страны {right_cc[0]} является..._ \
+                                        \n**1.** {cities[0]}.\n**2.** {cities[1]}.\n**3**. {cities[2]}.',
+                                        colour = discord.Color.dark_gray()))
     
     def check(message):
         return message.author.id == ctx.author.id
@@ -332,14 +353,19 @@ async def countries(ctx, par=None):
                         cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
                         cur_ids.execute(f"""UPDATE results SET points = '1', combo = '1', highest_combo = '1' WHERE id = '{ctx.author}'""")
                     else:
-                        points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
-                        cur_ids.execute(f"""UPDATE results SET points = '{points}' WHERE id = '{ctx.author}'""")
-
                         combo = int(cur_ids.execute(f"""SELECT combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0]) + 1
                         highest_combo = int(cur_ids.execute(f"""SELECT highest_combo FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
                         cur_ids.execute(f"""UPDATE results SET combo = '{combo}' WHERE id = '{ctx.author}'""")
                         if int(combo) > int(highest_combo):
                             cur_ids.execute(f"""UPDATE results SET highest_combo = '{combo}' WHERE id = '{ctx.author}'""")
+                        
+                        points = int(cur_ids.execute(f"""SELECT points FROM results WHERE id = '{ctx.author}'""").fetchall()[0][0])
+                        if combo < 10:
+                            cur_ids.execute(f"""UPDATE results SET points = '{points + 1}' WHERE id = '{ctx.author}'""")
+                        elif combo < 25:
+                            cur_ids.execute(f"""UPDATE results SET points = '{points + 2}' WHERE id = '{ctx.author}'""")
+                        elif combo >= 50:
+                            cur_ids.execute(f"""UPDATE results SET points = '{points + 3}' WHERE id = '{ctx.author}'""")
                     
                     con_ids.commit()
 
