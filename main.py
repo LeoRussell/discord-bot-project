@@ -163,9 +163,9 @@ async def cancel(ctx):
     if queue == [(str(ctx.author), )]:
         bot.remove_command("reply")
         if cur_lang == "ru":
-            await ctx.reply(f"Ввод отменён!")
+            await ctx.reply(f"Ввод **отменён!**")
         else:
-            await ctx.reply(f"Input canceled!")
+            await ctx.reply(f"Input **canceled!**")
         cur_ids.execute(f"""UPDATE options SET queue = 'None' WHERE id = '{ctx.author}'""")
         con_ids.commit()
     
@@ -623,42 +623,87 @@ async def countries(ctx, par=None):
 
 @bot.command(name="help")
 async def help(ctx, par='1'):
-    if par == '1':
-        output = '**Общие сведения о функциях бота.** \
-        \n \
-        \n**#** `/traducere [par] [spar]` - игра, целью которой является перевод предложенного слова с русского языка на английский и наоборот. Ответ:\
-        \n`/reply [слово-перевод] [добавочное слово-перевод]`. \
-        \n__Параметры__: _**loop**_ - зацикливание игрового процесса, _**en/ru**_ - выбор языка перевода. \
-        \n \
-        \n**#** `/words` - игра, целью которого является продолжение цепочки слов с последней буквы данного слова. Ответ:\
-        \n`/reply [слово-продолжение].` \
-        \n \
-        \n**#**` /countries [par]` - игра, целью которой явлется проверка знаний названий столиц определенных знаний на английском языке. Ответ:\
-        \n`/reply [цифра-ответ]` \
-        \n__Параметры__: _**loop**_ - зацикливание игрового процесса. \
-        \n \
-        \n**#** `/cancel` - отмена ввода, например, при зацикленном вводе. \
-        \n \
-        \n*Для вывода следующего списка команд введите **"/help 2"***. '
-    
-    elif par == '2':
-        output = "**#** `/timer [par] [spar]` - команда, изменяющая время ожидания, либо устаналивающая таймер на некоторое время.\
-        \n_Параметры_: \
-        \n **I.** _**[число]**_ - время, на которое будет установлен таймер _(до 300)_.\
-        \n**II.** _**set**_ - указатель на следующий параметр, _**[число]**_ - время на ответ пользователя _(до 60)_.\
-        \n***!**Без параметра выведет текущее значение времени ответа пользователя**!*** \
-        \n \
-        \n**#** `/language [par]` - команда, устанавливающая язык бота. \
-        \n__Параметры__: _**ru/en**_ - язык, на котором будет отвечать бот. \
-        \n***!**Без параметра выведет текущий установленный язык бота**!***\
-        \n\
-        \n**#** `/top [par]` - команда, выводящая локальный топ лидеров сервера по очкам. \
-        \n__Параметры__: _**[число]**_ - число выводимых строк из списка лидеров. \
-        \n\
-        \n**#** `/statistic` - команда, выводящая общую статистику о человеке. "
+    if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
+        cur_ids.execute(f"""INSERT INTO options(id, language, timer, queue) VALUES('{ctx.author}', 'en', '15', 'None')""")
+        con_ids.commit()
+
+    options = [i for i in cur_ids.execute(f"""SELECT language, timer FROM options WHERE id = '{ctx.author}'""").fetchall()[-1]]
+    cur_lang = options[0]
+    if cur_lang == "ru":
+        if par == '1':
+            output = '**Общие сведения о функциях бота.** \
+            \n \
+            \n**#** `/traducere [par] [spar]` - игра, целью которой является перевод предложенного слова с русского языка на английский и наоборот. Ответ:\
+            \n`/reply [слово-перевод] [добавочное слово-перевод]`. \
+            \n__Параметры__: _**loop**_ - зацикливание игрового процесса, _**en/ru**_ - выбор языка перевода. \
+            \n \
+            \n**#** `/words` - игра, целью которого является продолжение цепочки слов с последней буквы данного слова. Ответ:\
+            \n`/reply [слово-продолжение].` \
+            \n \
+            \n**#**` /countries [par]` - игра, целью которой явлется проверка знаний названий столиц определенных знаний на английском языке. Ответ:\
+            \n`/reply [цифра-ответ]` \
+            \n__Параметры__: _**loop**_ - зацикливание игрового процесса. \
+            \n \
+            \n**#** `/cancel` - отмена ввода, например, при зацикленном вводе. \
+            \n \
+            \n*Для вывода следующего списка команд введите **"/help 2"***. '
+        
+        elif par == '2':
+            output = "**#** `/timer [par] [spar]` - команда, изменяющая время ожидания, либо устаналивающая таймер на некоторое время.\
+            \n_Параметры_: \
+            \n **I.** _**[число]**_ - время, на которое будет установлен таймер _(до 300)_.\
+            \n**II.** _**set**_ - указатель на следующий параметр, _**[число]**_ - время на ответ пользователя _(до 60)_.\
+            \n***!**Без параметра выведет текущее значение времени ответа пользователя**!*** \
+            \n \
+            \n**#** `/language [par]` - команда, устанавливающая язык бота. \
+            \n__Параметры__: _**ru/en**_ - язык, на котором будет отвечать бот. \
+            \n***!**Без параметра выведет текущий установленный язык бота**!***\
+            \n\
+            \n**#** `/top [par]` - команда, выводящая локальный топ лидеров сервера по очкам. \
+            \n__Параметры__: _**[число]**_ - число выводимых строк из списка лидеров. \
+            \n\
+            \n**#** `/statistic` - команда, выводящая общую статистику о человеке. "
+        
+        else:
+            output = "/help может принимать в виде параметра только 1 и 2."
     
     else:
-        output = "/help может принимать в виде параметра только 1 и 2."
+        if par == '1':
+            output = '**General information about the functions of the bot.** \
+            \n \
+            \n**#** `/traducere [par] [spar]` - a game, the purpose of which is to translate the proposed word from Russian into English and vice versa. Reply:\
+            \n`/reply [word] [additional translation]`. \
+            \n__Parameters__: _**loop**_ - game looping, _**en/ru**_ - choice of translation language. \
+            \n \
+            \n**#** `/words` - a game whose goal is to continue a chain of words from the last letter of a given word. Reply:\
+            \n`/reply [translation].` \
+            \n \
+            \n**#**` /countries [par]` - a game whose purpose is to test the knowledge of the names of the capitals of certain knowledge in English. Reply:\
+            \n`/reply [digit]` \
+            \n__Parameters__: _**loop**_ - game looping. \
+            \n \
+            \n**#** `/cancel` - cancellation of input, for example, with looped input. \
+            \n \
+            \n*To display the following list of commands, type **"/help 2"***. '
+        
+        elif par == '2':
+            output = "**#** `/timer [par] [spar]` - a command that changes the waiting time, or sets the timer for a certain time.\
+            \n__Parameters__: \
+            \n **I.** _**[digit]**_ - time for which the timer will be set _(до 300)_.\
+            \n**II.** _**set**_ - pointer to next parameter, _**[digit]**_ - user response time _(до 60)_.\
+            \n***!**Without a parameter, will display the current value of the user's response time**!*** \
+            \n \
+            \n**#** `/language [par]` - command that sets the language of the bot. \
+            \n__Parameters__: _**ru/en**_ - the language in which the bot will respond. \
+            \n***!**Without parameter will display the currently installed language of the bot**!***\
+            \n\
+            \n**#** `/top [par]` - command that displays the local top of the server leaders by points. \
+            \n__Parameters__: _**[digit]**_ - the number of rows to display from the leaderboard. \
+            \n\
+            \n**#** `/statistic` - command that displays general statistics about a person. "
+        
+        else:
+            output = "/help может принимать в виде параметра только 1 и 2."
 
     await ctx.reply(output)
 
