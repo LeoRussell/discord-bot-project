@@ -28,7 +28,6 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 @bot.command(name="traducere")
 async def traducere(ctx, par=None, spar=None):
-  bot.remove_command("reply")
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -49,6 +48,7 @@ async def traducere(ctx, par=None, spar=None):
       f"""SELECT id FROM options WHERE queue = 'taken'""").fetchall()
   ]
   if queue == [] or queue == [(str(ctx.author), )]:
+    bot.remove_command("reply")
     cur_ids.execute(
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
 
@@ -482,7 +482,6 @@ async def top(ctx, par=10):
 
 @bot.command(name="words")
 async def words(ctx):
-  bot.remove_command("reply")
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -505,9 +504,10 @@ async def words(ctx):
   if queue == [] or queue == [(str(ctx.author), )]:
     cur_ids.execute(
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
+    bot.remove_command("reply")
     word = random.choice(list(web2lowerset))
     con_ids.commit()
-
+    
     await ctx.reply(f"**{word.capitalize()}**")
 
     def check(message):
@@ -682,7 +682,6 @@ async def statistic(ctx):
 
 @bot.command(name="countries")
 async def countries(ctx, par=None):
-  bot.remove_command("reply")
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -706,6 +705,7 @@ async def countries(ctx, par=None):
     cur_ids.execute(
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
     con_ids.commit()
+    bot.remove_command("reply")
 
     countries_list = cur_words.execute(
       f"""SELECT country, city FROM cities""").fetchall()
