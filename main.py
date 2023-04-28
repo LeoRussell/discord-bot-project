@@ -28,7 +28,6 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 @bot.command(name="traducere")
 async def traducere(ctx, par=None, spar=None):
-    bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, timer, queue) VALUES('{ctx.author}', 'en', '15', 'None')""")
         con_ids.commit()
@@ -39,7 +38,7 @@ async def traducere(ctx, par=None, spar=None):
     queue = [i for i in cur_ids.execute(f"""SELECT id FROM options WHERE queue = 'taken'""").fetchall()]
     if queue == [] or queue == [(str(ctx.author), )]:
         cur_ids.execute(f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
-
+        bot.remove_command("reply")
         if (par in ["loop", "ru", "en", None]) and (spar in ["loop", "ru", "en", None]):
             if "ru" == par or "ru" == spar:
                 output = random.choice(russianwords)[0]
@@ -362,7 +361,6 @@ async def top(ctx, par=10):
 
 @bot.command(name="words")
 async def words(ctx):
-    bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, timer, queue) VALUES('{ctx.author}', 'en', '15', 'None')""")
         con_ids.commit()
@@ -373,6 +371,7 @@ async def words(ctx):
     queue = [i for i in cur_ids.execute(f"""SELECT id FROM options WHERE queue = 'taken'""").fetchall()]
     if queue == [] or queue == [(str(ctx.author), )]:
         cur_ids.execute(f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
+        bot.remove_command("reply")
         word = random.choice(list(web2lowerset))
         con_ids.commit()
 
@@ -494,7 +493,6 @@ async def statistic(ctx):
 
 @bot.command(name="countries")
 async def countries(ctx, par=None):
-    bot.remove_command("reply")
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, timer, queue) VALUES('{ctx.author}', 'en', '15', 'None')""")
         con_ids.commit()
@@ -505,6 +503,7 @@ async def countries(ctx, par=None):
     queue = [i for i in cur_ids.execute(f"""SELECT id FROM options WHERE queue = 'taken'""").fetchall()]
     if queue == [] or queue == [(str(ctx.author), )]:
         cur_ids.execute(f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
+        bot.remove_command("reply")
         con_ids.commit()
 
         countries_list = cur_words.execute(f"""SELECT country, city FROM cities""").fetchall()
