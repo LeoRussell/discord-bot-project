@@ -304,8 +304,6 @@ async def timer(ctx, par=None, time=None):
 
 @bot.command(name="translate")
 async def translate(ctx, message):
-    message = (" ".join(message)).replace('"', '')
-
     url = "https://microsoft-translator-text.p.rapidapi.com/translate"
 
     querystring = {"to[0]":"ru","api-version":"3.0","profanityAction":"NoAction","textType":"plain"}
