@@ -28,6 +28,7 @@ russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 @bot.command(name="traducere")
 async def traducere(ctx, par=None, spar=None):
+
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -48,10 +49,9 @@ async def traducere(ctx, par=None, spar=None):
       f"""SELECT id FROM options WHERE queue = 'taken'""").fetchall()
   ]
   if queue == [] or queue == [(str(ctx.author), )]:
-    bot.remove_command("reply")
     cur_ids.execute(
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
-
+    bot.remove_command("reply")
     if (par in ["loop", "ru", "en", None]) and (spar
                                                 in ["loop", "ru", "en", None]):
       if "ru" == par or "ru" == spar:
@@ -406,6 +406,7 @@ async def timer(ctx, par=None, time=None):
 
 @bot.command(name="translate")
 async def translate(ctx, message):
+
   url = "https://microsoft-translator-text.p.rapidapi.com/translate"
 
   querystring = {
@@ -479,7 +480,8 @@ async def top(ctx, par=10):
 
 
 @bot.command(name="words")
-async def words(ctx):
+async def words(ctx, alpha="a"):
+
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -502,10 +504,15 @@ async def words(ctx):
   if queue == [] or queue == [(str(ctx.author), )]:
     cur_ids.execute(
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
-    bot.remove_command("reply")
-    word = random.choice(list(web2lowerset))
+    list_words = list(web2lowerset)
+    random.shuffle(list_words)
+    for i in list_words:
+      if i.startswith(alpha):
+        word = i
+        break
     con_ids.commit()
-    
+    bot.remove_command("reply")
+
     await ctx.reply(f"**{word.capitalize()}**")
 
     def check(message):
@@ -564,7 +571,7 @@ async def words(ctx):
 
             con_ids.commit()
 
-            asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
+            asyncio.run_coroutine_threadsafe(words(ctx, answer[-1]), bot.loop)
           else:
             if cur_ids.execute(
                 f"""SELECT id FROM results WHERE id = '{ctx.author}'"""
@@ -585,7 +592,7 @@ async def words(ctx):
               await ctx.send("Такого слова не существует!")
             else:
               await ctx.send("There is no such word!")
-            asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
+            asyncio.run_coroutine_threadsafe(words(ctx, answer[-1]), bot.loop)
 
         else:
           if cur_lang == "ru":
@@ -680,6 +687,7 @@ async def statistic(ctx):
 
 @bot.command(name="countries")
 async def countries(ctx, par=None):
+
   if str(ctx.author) not in [
       i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()
   ]:
@@ -704,7 +712,6 @@ async def countries(ctx, par=None):
       f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
     con_ids.commit()
     bot.remove_command("reply")
-
     countries_list = cur_words.execute(
       f"""SELECT country, city FROM cities""").fetchall()
 
