@@ -8,12 +8,13 @@ import asyncio
 import requests
 
 
-
+# creating bot.
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix=config.prefix, intents=intents) 
 bot.remove_command("help")
 
+#connecting db's
 con_ids = sqlite3.connect("ids.db")
 cur_ids = con_ids.cursor()
 
@@ -26,6 +27,7 @@ englishwords = cur_words.execute(f"""SELECT en FROM translates""").fetchall()
 russianwords = cur_words.execute(f"""SELECT ru FROM translates""").fetchall()
 
 
+#/traducere command.
 @bot.command(name="traducere")
 async def traducere(ctx, par=None, spar=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
@@ -150,6 +152,7 @@ async def traducere(ctx, par=None, spar=None):
         con_ids.commit()
         
 
+#/cancel command.
 @bot.command(name="cancel")
 async def cancel(ctx):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
@@ -181,6 +184,7 @@ async def cancel(ctx):
             await ctx.reply(f"Error! User **{queue[0][0]}** is already exercising!")
 
 
+#/language command.
 @bot.command(name="language")
 async def language(ctx, par=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
@@ -210,6 +214,7 @@ async def language(ctx, par=None):
             await ctx.reply(f"Error! Checking the correctness of the data you entered!")
 
     
+#/timer command.
 @bot.command(name="timer")
 async def timer(ctx, par=None, time=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]: 
@@ -302,24 +307,34 @@ async def timer(ctx, par=None, time=None):
             await ctx.send(f"Error! Check the correctness of the data you entered!")
 
 
+#/translate command.
 @bot.command(name="translate")
 async def translate(ctx, message):
     url = "https://microsoft-translator-text.p.rapidapi.com/translate"
 
-    querystring = {"to[0]":"ru","api-version":"3.0","profanityAction":"NoAction","textType":"plain"}
+    querystring = {
+        "to[0]": "ru",
+        "api-version": "3.0",
+        "profanityAction": "NoAction",
+        "textType": "plain"
+    }
 
-    payload = [{ "Text": message}]
+    payload = [{"Text": message}]
     headers = {
         "content-type": "application/json",
         "X-RapidAPI-Key": "5ae9d6a133mshe6372b0ccf5e37bp10183ajsn73865becc77e",
         "X-RapidAPI-Host": "microsoft-translator-text.p.rapidapi.com"
     }
 
-    response = requests.post(url, json=payload, headers=headers, params=querystring)
+    response = requests.post(url,
+                            json=payload,
+                            headers=headers,
+                            params=querystring)
 
     await ctx.reply(f"{response.json()[0]['translations'][0]['text']}")
 
 
+#/top command.
 @bot.command(name="top")
 async def top(ctx, par=10):
     if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
@@ -357,8 +372,9 @@ async def top(ctx, par=10):
     await ctx.send(output)
 
 
+#/words command.
 @bot.command(name="words")
-async def words(ctx):
+async def words(ctx, alpha="a"):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
         cur_ids.execute(f"""INSERT INTO options(id, language, timer, queue) VALUES('{ctx.author}', 'en', '15', 'None')""")
         con_ids.commit()
@@ -370,7 +386,12 @@ async def words(ctx):
     if queue == [] or queue == [(str(ctx.author), )]:
         cur_ids.execute(f"""UPDATE options SET queue = 'taken' WHERE id = '{ctx.author}'""")
         bot.remove_command("reply")
-        word = random.choice(list(web2lowerset))
+        list_words = list(web2lowerset)
+        random.shuffle(list_words)
+        for i in list_words:
+            if i.startswith(alpha):
+                word = i
+                break
         con_ids.commit()
 
         await ctx.reply(f"**{word.capitalize()}**")
@@ -404,7 +425,7 @@ async def words(ctx):
                         
                         con_ids.commit()
 
-                        asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
+                        asyncio.run_coroutine_threadsafe(words(ctx, answer[-1]), bot.loop)
                     else:
                         if cur_ids.execute(f"""SELECT id FROM results WHERE id = '{ctx.author}'""").fetchall() == []:
                             cur_ids.execute(f"""INSERT INTO results(id) VALUES('{ctx.author}')""")
@@ -418,7 +439,7 @@ async def words(ctx):
                             await ctx.send("Такого слова не существует!")
                         else:
                             await ctx.send("There is no such word!")
-                        asyncio.run_coroutine_threadsafe(words(ctx), bot.loop)
+                        asyncio.run_coroutine_threadsafe(words(ctx, answer[-1]), bot.loop)
 
                 else:
                     if cur_lang == "ru":
@@ -450,6 +471,7 @@ async def words(ctx):
             await ctx.reply(f"Error! User **{queue[0][0]}** is already exercising!")
 
 
+#/statistic command.
 @bot.command(name="statistic")
 async def statistic(ctx):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
@@ -489,6 +511,7 @@ async def statistic(ctx):
     await ctx.send(output)
 
 
+#/countries command.
 @bot.command(name="countries")
 async def countries(ctx, par=None):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
@@ -618,6 +641,7 @@ async def countries(ctx, par=None):
             await ctx.reply(f"Error! User **{queue[0][0]}** is already exercising")
         
 
+#/help command.
 @bot.command(name="help")
 async def help(ctx, par='1'):
     if str(ctx.author) not in [i[0] for i in cur_ids.execute(f"""SELECT id FROM options""").fetchall()]:
